@@ -1,53 +1,72 @@
+/*
+
+2.0 Changes:
+- Warnings now explain why 2 colors are hard to tell apart and give a tip
+  on how to fix it (like add more blue, or make one color lighter/darker)
+- Every check gets saved to colorResults.txt (new checks get added to the end)
+- 3 New major functions:
+    getColorValue - asks for one red, green, or blue value until its valid
+    saveResultsToFile - writes the results of a check to the file
+    getWhyAndHowToFix - builds the why & tip message for a warning
+- New vector: resultMessages holds the results of each check before saving
+- RGB value range now 0-255 instead of 0-256
+*/
+
 #include <iostream>
+#include <fstream>
+#include <vector>
+#include <string>
 using namespace std;
+
+//function prototypes
+int getColorValue(string channelName);
+void saveResultsToFile(ofstream &resultsFile, vector<string> &resultMessages);
+string getWhyAndHowToFix(double differenceInRedGreenMix, int differenceInBlue);
 
 int main()
 {
 
-    
+
 int numberOfColorsToCheck;
   int redValue[3],greenValue[3],blueValue[3];
 char userWantsToGoAgain='y';
 int tooCloseLimit=90; //if the diffrence is less than this its too close. 90 seemed ok after testing
+vector<string> resultMessages; //holds every result line from one check so it can be saved to the file
+ofstream resultsFile("colorResults.txt", ios::app); //ios::app adds to the end of the file instead of erasing old results
 
-    
+
 
 cout<<"Color Blindness Pallete Checker"<<endl;
     cout<<"This program checks colors for Deuteranopia (red-green color blindness)."<<endl;
+cout<<"Every check gets saved to colorResults.txt"<<endl;
+
+if(!resultsFile)
+{
+    cout<<"Could not open colorResults.txt, results will not be saved."<<endl;
+}
 
 
 
 
-    
+
 //main loop
 while(userWantsToGoAgain=='y')
 {
+  resultMessages.clear(); //start fresh for this check
 
   cout<< endl << "How many colors do you want to check? (2 or 3): ";
     cin>>numberOfColorsToCheck;
   while(numberOfColorsToCheck<2 || numberOfColorsToCheck>3){ cout<<"Please enter 2 or 3: "; cin>>numberOfColorsToCheck; }
 
-  //get the rgb for each color. has to be 0-256 or it makes u retype it
+  //get the rgb for each color. has to be 0-255 or it makes u retype it
   for(int i=0;i<numberOfColorsToCheck;i++){
       cout<<endl<<"Color "<<i+1<<":"<<endl;
 
-    cout<<"  Red: "; cin>>redValue[i];
-      while(redValue[i]<0 || redValue[i]>256){
-      cout<<"  That number has to be between 0 and 256. Try again: ";
-        cin>>redValue[i];}
+    redValue[i]=getColorValue("Red");
+    greenValue[i]=getColorValue("Green");
+    blueValue[i]=getColorValue("Blue");
 
-      cout<<"  Green: ";
-    cin>>greenValue[i];
-    while(greenValue[i]<0 || greenValue[i]>256)
-    {
-        cout<<"  That number has to be between 0 and 256. Try again: ";
-      cin>>greenValue[i];
-    }
-
-    cout<<"  Blue: "; cin>>blueValue[i];
-  while(blueValue[i]<0 || blueValue[i]>256){
-        cout<<"  That number has to be between 0 and 256. Try again: "; cin>>blueValue[i];
-  }
+    resultMessages.push_back("Color "+to_string(i+1)+": R="+to_string(redValue[i])+" G="+to_string(greenValue[i])+" B="+to_string(blueValue[i]));
   }
 
 
@@ -62,7 +81,7 @@ while(userWantsToGoAgain=='y')
   */
 
 
-    
+
   double redGreenMixForColorBlind[3];
 
   for(int i=0;i<numberOfColorsToCheck;i++){
@@ -73,7 +92,7 @@ while(userWantsToGoAgain=='y')
 int numberOfWarnings=0;
 
 
-    
+
   //compare every color with every other color (1&2, 1&3, 2&3)
   //j starts at i+1 so it doesnt check the same pair twice or a color with itself
   for(int i=0;i<numberOfColorsToCheck;i++)
@@ -91,33 +110,101 @@ int numberOfWarnings=0;
       }
 
 
-        
+
     double totalDifferenceBetweenTheTwoColors=differenceInRedGreenMix+differenceInBlue;
+    string pairMessage;
 
       if(totalDifferenceBetweenTheTwoColors<tooCloseLimit){
-          cout<<"WARNING: Color "<<i+1<<" and Color "<<j+1<<" are hard to tell apart with Deuteranopia."<<endl;
+          pairMessage="WARNING: Color "+to_string(i+1)+" and Color "+to_string(j+1)+" are hard to tell apart with Deuteranopia.";
         numberOfWarnings++;
       }
       else
       {
-      cout<<"Color "<<i+1<<" and Color "<<j+1<<" are easy to tell apart."<<endl;
+      pairMessage="Color "+to_string(i+1)+" and Color "+to_string(j+1)+" are easy to tell apart.";
+      }
+
+      cout<<pairMessage<<endl;
+      resultMessages.push_back(pairMessage);
+
+      //if its a warning tell the user why and how to fix it
+      if(totalDifferenceBetweenTheTwoColors<tooCloseLimit){
+          string feedback=getWhyAndHowToFix(differenceInRedGreenMix, differenceInBlue);
+          cout<<feedback<<endl;
+          resultMessages.push_back(feedback);
       }
     }
   }
 
 
 
-    
-  if(numberOfWarnings==0) cout<<"All good! These colors work for people with Deuteranopia."<<endl;
+
+  if(numberOfWarnings==0){
+      cout<<"All good! These colors work for people with Deuteranopia."<<endl;
+      resultMessages.push_back("All good! These colors work for people with Deuteranopia.");
+  }
   else
   {
       cout<<"Total warnings: "<<numberOfWarnings<<endl;
+      resultMessages.push_back("Total warnings: "+to_string(numberOfWarnings));
   }
+
+  saveResultsToFile(resultsFile, resultMessages);
 
     cout<<endl<<"Do you want to check more colors? (y/n): ";
   cin>>userWantsToGoAgain;
 }
 
+resultsFile.close();
 cout<<"Goodbye!"<<endl;
   return 0;
+}
+
+
+//asks for one color channel (Red, Green, or Blue) and keeps asking until its 0-255
+//channelName is pass by value because the function only needs to print it
+//returns the valid number the user typed
+int getColorValue(string channelName)
+{
+    int value;
+    cout<<"  "<<channelName<<": ";
+    cin>>value;
+    while(value<0 || value>255){
+        cout<<"  That number has to be between 0 and 255. Try again: ";
+        cin>>value;
+    }
+    return value;
+}
+
+
+//writes every line from this check into colorResults.txt
+//resultsFile is pass by reference because a file stream cant be copied, it has to write to the same open file
+//resultMessages is pass by reference so it doesnt make a copy of the whole vector
+//void because it just writes to the file and doesnt need to give anything back
+void saveResultsToFile(ofstream &resultsFile, vector<string> &resultMessages)
+{
+    resultsFile<<"----- New Check -----"<<endl;
+    for(int i=0;i<resultMessages.size();i++){
+        resultsFile<<resultMessages[i]<<endl;
+    }
+    resultsFile<<endl;
+}
+
+
+//explains why 2 colors are too close and gives a tip on how to fix it
+//both parameters are pass by value because it only reads them
+//returns the message as a string so main can print it and save it to the file
+string getWhyAndHowToFix(double differenceInRedGreenMix, int differenceInBlue)
+{
+    string message="  Why: to someone with Deuteranopia their red-green mix is only "+to_string((int)differenceInRedGreenMix)
+        +" apart and their blue is only "+to_string(differenceInBlue)+" apart (together they need to be at least 90 apart).";
+
+    //tell them to fix whichever one is smaller since thats the bigger problem
+    if(differenceInBlue<differenceInRedGreenMix){
+        message+="\n  Tip: they have almost the same amount of blue. Add a lot more blue to one of them (like turning it purple or teal), blue still shows up fine with Deuteranopia.";
+    }
+    else{
+        message+="\n  Tip: changing red to green doesnt help since those look the same to them. Make one color a lot lighter or darker instead.";
+    }
+
+    return message;
 }
