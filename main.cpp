@@ -16,6 +16,7 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <limits>
 using namespace std;
 
 //function prototypes
@@ -55,16 +56,23 @@ while(userWantsToGoAgain=='y')
   resultMessages.clear(); //start fresh for this check
 
   cout<< endl << "How many colors do you want to check? (2 or 3): ";
-    cin>>numberOfColorsToCheck;
-  while(numberOfColorsToCheck<2 || numberOfColorsToCheck>3){ cout<<"Please enter 2 or 3: "; cin>>numberOfColorsToCheck; }
+  while(!(cin>>numberOfColorsToCheck) || numberOfColorsToCheck<2 || numberOfColorsToCheck>3){
+      if(cin.eof()) return 0;
+      cin.clear();
+      cin.ignore(numeric_limits<streamsize>::max(), '\n');
+      cout<<"Please enter a number, 2 or 3: ";
+  }
 
   //get the rgb for each color. has to be 0-255 or it makes u retype it
   for(int i=0;i<numberOfColorsToCheck;i++){
       cout<<endl<<"Color "<<i+1<<":"<<endl;
 
     redValue[i]=getColorValue("Red");
+    if(redValue[i]==-1) return 0;
     greenValue[i]=getColorValue("Green");
+    if(greenValue[i]==-1) return 0;
     blueValue[i]=getColorValue("Blue");
+    if(blueValue[i]==-1) return 0;
 
     resultMessages.push_back("Color "+to_string(i+1)+": R="+to_string(redValue[i])+" G="+to_string(greenValue[i])+" B="+to_string(blueValue[i]));
   }
@@ -151,7 +159,7 @@ int numberOfWarnings=0;
   saveResultsToFile(resultsFile, resultMessages);
 
     cout<<endl<<"Do you want to check more colors? (y/n): ";
-  cin>>userWantsToGoAgain;
+  if(!(cin>>userWantsToGoAgain)) break;
 }
 
 resultsFile.close();
@@ -167,10 +175,11 @@ int getColorValue(string channelName)
 {
     int value;
     cout<<"  "<<channelName<<": ";
-    cin>>value;
-    while(value<0 || value>255){
-        cout<<"  That number has to be between 0 and 255. Try again: ";
-        cin>>value;
+    while(!(cin>>value) || value<0 || value>255){
+        if(cin.eof()) return -1;
+        cin.clear();
+        cin.ignore(numeric_limits<streamsize>::max(), '\n');
+        cout<<"  Please enter a number between 0 and 255: ";
     }
     return value;
 }
@@ -208,3 +217,4 @@ string getWhyAndHowToFix(double differenceInRedGreenMix, int differenceInBlue)
 
     return message;
 }
+

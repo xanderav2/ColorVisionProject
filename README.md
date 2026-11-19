@@ -8,7 +8,7 @@ Version 2 changes:
 -added the getColorValue function (returns int, pass by value) for rgb input  
 -added the  saveResultsToFile function (void, pass by reference) writes results to the file  
 -added the  getWhyAndHowToFix function (returns string) makes the why/tip message  
-- vector resultMessages holds the results before saving  
+-vector resultMessages holds the results before saving  
 -arrays redValue, greenValue, blueValue still hold the rgb values  
 -uses ofstream for file output  
 
@@ -35,3 +35,10 @@ Total warnings: 1
 
 Do you want to check more colors? (y/n): n  
 Goodbye!
+
+the goal for version 2 is to help users understand warnings, improve their color choices, and review saved checks.
+
+-added error handling for letters entered instead of numbers
+
+The suggestions from my program are just general tips and may not be exact for every color combination.
+
